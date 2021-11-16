@@ -1,4 +1,5 @@
-﻿using BenchmarkDotNet.Running;
+﻿using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Running;
 using System;
 
 namespace BenchmarkPOC
@@ -7,9 +8,9 @@ namespace BenchmarkPOC
     {
         static void Main(string[] args)
         {
-            var result = BenchmarkRunner.Run<StructsBenchmarks>();
+            var result = BenchmarkRunner.Run<CollectionBenchmarks>();
 
-
+            //BenchmarkSwitcher.FromAssembly(typeof(CollectionBenchmarks).Assembly).Run(args, new DebugInProcessConfig());
 
             /*BenchmarkRunner.Run<IteratorStructBenchmarks>();
             BenchmarkRunner.Run<IteratorClassBenchmarks>();*/

@@ -1,102 +1,54 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 using BenchmarkPOC.Model;
 using System;
-
+using System.Collections.Generic;
 
 namespace BenchmarkPOC
 {
     [MemoryDiagnoser]
+    [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
     [Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
     [RankColumn]
     public partial class CollectionBenchmarks
     {
         private const int arraySize = 1000000;
+        private ClassA[] array = new ClassA[arraySize];
 
-        [Benchmark]
-        public void TupleBenchmark()
+        private ClassA firstToFind;
+        private ClassA secondToFind;
+        private ClassA thirdToFind;
+
+        public CollectionBenchmarks()
         {
-            var tuples = new Tuple<int, string>[arraySize];
             for (int i = 0; i < arraySize; i++)
             {
-                tuples[i] = new Tuple<int, string>(i, i.ToString());
+                array[i] = new Model.ClassA
+                {
+                    Item1 = i,
+                    Item2 = i.ToString()
+                };
+
+                list.Add(array[i]);
+                hashSet.Add(array[i]);
+                dictionary.Add(i, array[i]);
             }
 
-            int sum = 0;
-
-            for (int i = 0; i < arraySize; i++)
-            {
-                sum += tuples[i].Item1;
-            }
+            firstToFind = array[arraySize / 3];
+            secondToFind = array[(arraySize / 3) * 2];
+            thirdToFind = array[arraySize - 1];
         }
 
-        [Benchmark]
-        public void DynamicBenchmark()
+        ~CollectionBenchmarks()
         {
-            var dynamics = new dynamic[arraySize];
-            for (int i = 0; i < arraySize; i++)
-            {
-                dynamics[i] = new { Item1 = i, Item2 = i.ToString() };
-            }
-
-            int sum = 0;
-
-            for (int i = 0; i < arraySize; i++)
-            {
-                sum += dynamics[i].Item1;
-            }
-        }
-
-        [Benchmark]
-        public void ClassBenchmark()
-        {
-            var objects = new Model.ClassA[arraySize];
-            for (int i = 0; i < arraySize; i++)
-            {
-                objects[i] = new Model.ClassA { Item1 = i, Item2 = i.ToString() };
-            }
-
-            int sum = 0;
-
-            for (int i = 0; i < arraySize; i++)
-            {
-                sum += objects[i].Item1;
-            }
-        }
-
-        [Benchmark]
-        public void StructBenchmark()
-        {
-            var structs = new StructA[arraySize];
-            for (int i = 0; i < arraySize; i++)
-            {
-                structs[i] = new StructA { Item1 = i, Item2 = i.ToString() };
-            }
-
-            int sum = 0;
-
-            for (int i = 0; i < arraySize; i++)
-            {
-                sum += structs[i].Item1;
-            }
+            Array.Clear(array, 0, arraySize);
+            hashSet.Clear();
+            list.Clear();
+            dictionary.Clear();
+            GC.Collect();
         }
 
 
-        [Benchmark]
-        public void RecordBenchmark()
-        {
-            var structs = new RecordA [arraySize];
-            for (int i = 0; i < arraySize; i++)
-            {
-                structs[i] = new RecordA { Item1 = i, Item2 = i.ToString() };
-            }
-
-            int sum = 0;
-
-            for (int i = 0; i < arraySize; i++)
-            {
-                sum += structs[i].Item1;
-            }
-        }
     }
 }
 
