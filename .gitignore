@@ -5,3 +5,5 @@
 /POCTests/bin
 /POCTests/obj
 /.vs/BenchmarkPOC/v16
+/Tests/obj
+/Tests/bin/Debug/net5.0
