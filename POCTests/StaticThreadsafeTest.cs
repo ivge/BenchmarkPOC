@@ -11,48 +11,48 @@ namespace POCTests.StaticThreadsafeTest
     public class StaticThreadsafeTest
     {
         private const int iterations = 10000000;
-        private delegate void InstanceOperation(InstanceClass instance);
+        private delegate void InstanceOperation();
         private delegate void StaticOperation();
 
         private class InstanceClass
         {
-            public readonly object Lock = new object();
+            private readonly object Lock = new object();
             public long Field { get; set; } = 0;
 
-            public void Add(InstanceClass instance)
+            public void Add()
             {
                 for (long i = 0; i < iterations; i++)
                 {
-                    instance.Field += 1;
+                    this.Field += 1;
                 }
             }
 
-            public void Subtract(InstanceClass instance)
+            public void Subtract()
             {
                 for (long i = 0; i < iterations; i++)
                 {
-                    instance.Field -= 1;
+                    this.Field -= 1;
                 }
             }
 
-            public void AddLocked(InstanceClass instance)
+            public void AddLocked()
             {
                 for (long i = 0; i < iterations; i++)
                 {
-                    lock (instance.Lock)
+                    lock (this.Lock)
                     {
-                        instance.Field += 1;
+                        this.Field += 1;
                     }
                 }
             }
 
-            public void SubtractLocked(InstanceClass instance)
+            public void SubtractLocked()
             {
                 for (long i = 0; i < iterations; i++)
                 {
-                    lock (instance.Lock)
+                    lock (this.Lock)
                     {
-                        instance.Field -= 1;
+                        this.Field -= 1;
                     }
                 }
             }
@@ -110,7 +110,7 @@ namespace POCTests.StaticThreadsafeTest
 
 
             var instance = new InstanceClass();
-            StartTasksInstance(tasks, instance, instance.Add, instance.Subtract);
+            StartTasksInstance(tasks, instance.Add, instance.Subtract);
 
             WaitAllTasks(tasks);
 
@@ -123,7 +123,7 @@ namespace POCTests.StaticThreadsafeTest
             var tasks = new List<Task>();
 
             var instance = new InstanceClass();
-            StartTasksInstance(tasks, instance, instance.AddLocked, instance.SubtractLocked);
+            StartTasksInstance(tasks, instance.AddLocked, instance.SubtractLocked);
 
             WaitAllTasks(tasks);
 
@@ -172,12 +172,12 @@ namespace POCTests.StaticThreadsafeTest
             }
         }
 
-        private void StartTasksInstance(List<Task> tasks, InstanceClass instance, InstanceOperation add, InstanceOperation subtract)
+        private void StartTasksInstance(List<Task> tasks, InstanceOperation add, InstanceOperation subtract)
         {
             for (int i = 0; i < 10; i++)
             {
-                tasks.Add(Task.Run(() => add(instance)));
-                tasks.Add(Task.Run(() => subtract(instance)));
+                tasks.Add(Task.Run(() => add()));
+                tasks.Add(Task.Run(() => subtract()));
             }
         }
 
@@ -189,7 +189,5 @@ namespace POCTests.StaticThreadsafeTest
                 tasks.Add(Task.Run(() => subtract()));
             }
         }
-
-
     }
 }
