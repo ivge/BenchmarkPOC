@@ -7,7 +7,7 @@ namespace POCTests.OverrideOrNewTests
     [TestClass]
     public class OverrideNewTest
     {
-        private class A
+        private class BaseClass
         {
             public virtual string GetString()
             {
@@ -15,15 +15,15 @@ namespace POCTests.OverrideOrNewTests
             }
         }
 
-        private class B : A
+        private class ClassThatHidesViaNew : BaseClass
         {
             public new string GetString()
             {
-                return "new";
+                return "New";
             }
         }
 
-        private class C : A
+        private class ClassThatExtendViaOverride : BaseClass
         {
             public override string GetString()
             {
@@ -31,24 +31,24 @@ namespace POCTests.OverrideOrNewTests
             }
         }
 
-        private string GetString(A instance) => instance.GetString();
+        private string GetString(BaseClass instance) => instance.GetString();
 
         [TestMethod]
         public void TestMethodBase()
         {
-            Assert.AreEqual("Base", GetString(new A()));
+            Assert.AreEqual("Base", GetString(new BaseClass()));
         }
 
         [TestMethod]
         public void TestMethodNew()
         {
-            Assert.AreEqual("Base", GetString(new B()));
+            Assert.AreEqual("Base", GetString(new ClassThatHidesViaNew()));
         }
 
         [TestMethod]
         public void TestMethodOverride()
         {
-            Assert.AreEqual("Override", GetString(new C()));
+            Assert.AreEqual("Override", GetString(new ClassThatExtendViaOverride()));
         }
     }
 }
