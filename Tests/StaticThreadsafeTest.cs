@@ -21,10 +21,10 @@ namespace POCTests.StaticThreadsafeTest
             bool result;
             //int wt, pt;
             ThreadPool.GetAvailableThreads(out int wt, out int pt);
-            result = ThreadPool.SetMinThreads(3, pt);
+            result = ThreadPool.SetMinThreads(100, pt);
             Assert.AreEqual(true, result);
 
-            result = ThreadPool.SetMaxThreads(3, pt);
+            result = ThreadPool.SetMaxThreads(100, pt);
             Assert.AreEqual(true, result);
         }
 
@@ -118,6 +118,20 @@ namespace POCTests.StaticThreadsafeTest
 
 
         [TestMethod]
+        public async Task TestMethodInstanceAsync()
+        {
+            var tasks = new List<Task>();
+
+
+            var instance = new InstanceClass();
+            StartTasksInstance(tasks, instance.Add, instance.Subtract);
+
+            await WaitAllTasks(tasks);
+
+            Assert.AreEqual(0, instance.Field);
+        }
+
+        [TestMethod]
         public void TestMethodInstance()
         {
             var tasks = new List<Task>();
@@ -126,7 +140,21 @@ namespace POCTests.StaticThreadsafeTest
             var instance = new InstanceClass();
             StartTasksInstance(tasks, instance.Add, instance.Subtract);
 
-            WaitAllTasks(tasks);
+            WaitAllTasks(tasks).Wait();
+
+            Assert.AreEqual(0, instance.Field);
+        }
+
+
+        [TestMethod]
+        public async Task TestMethodInstanceLockedAsync()
+        {
+            var tasks = new List<Task>();
+
+            var instance = new InstanceClass();
+            StartTasksInstance(tasks, instance.AddLocked, instance.SubtractLocked);
+
+            await WaitAllTasks (tasks);
 
             Assert.AreEqual(0, instance.Field);
         }
@@ -139,9 +167,23 @@ namespace POCTests.StaticThreadsafeTest
             var instance = new InstanceClass();
             StartTasksInstance(tasks, instance.AddLocked, instance.SubtractLocked);
 
-            WaitAllTasks(tasks);
+            WaitAllTasks(tasks).Wait();
+            
 
             Assert.AreEqual(0, instance.Field);
+        }
+
+        [TestMethod]
+        public async Task TestMethodStaticAsync()
+        {
+            var tasks = new List<Task>();
+
+            StaticClass.Field = 0;
+
+            StartTasksStatic(tasks, StaticClass.Add, StaticClass.Subtract);
+            await WaitAllTasks(tasks);
+
+            Assert.AreEqual(0, StaticClass.Field);
         }
 
         [TestMethod]
@@ -152,9 +194,20 @@ namespace POCTests.StaticThreadsafeTest
             StaticClass.Field = 0;
 
             StartTasksStatic(tasks, StaticClass.Add, StaticClass.Subtract);
-            WaitAllTasks(tasks);
+            WaitAllTasks(tasks).Wait();
 
             Assert.AreEqual(0, StaticClass.Field);
+        }
+
+
+        [TestMethod]
+        public async Task TestMethodStaticLockedAsync()
+        {
+            var tasks = new List<Task>();
+            StaticClass.Field = 0;
+            StartTasksStatic(tasks, StaticClass.AddLocked, StaticClass.SubtractLocked);
+            await WaitAllTasks(tasks);
+             Assert.AreEqual(0, StaticClass.Field);
         }
 
 
@@ -162,16 +215,13 @@ namespace POCTests.StaticThreadsafeTest
         public void TestMethodStaticLocked()
         {
             var tasks = new List<Task>();
-
             StaticClass.Field = 0;
-
             StartTasksStatic(tasks, StaticClass.AddLocked, StaticClass.SubtractLocked);
-            WaitAllTasks(tasks);
-
+            WaitAllTasks(tasks).Wait();
             Assert.AreEqual(0, StaticClass.Field);
         }
 
-        private static void WaitAllTasks(List<Task> tasks)
+        private async Task WaitAllTasks(List<Task> tasks)
         {
             var taskAll = Task.WhenAll(tasks.ToArray());
 
@@ -186,7 +236,7 @@ namespace POCTests.StaticThreadsafeTest
 
                 Console.WriteLine($"wt = {wt}, pt = {pt}, pending = {ThreadPool.PendingWorkItemCount}, tc = {ThreadPool.ThreadCount}" +
                     $" {s}");
-                Thread.Sleep(100);
+                await Task.Delay(100);
             }
         }
 
