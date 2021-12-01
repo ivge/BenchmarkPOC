@@ -11,8 +11,22 @@ namespace POCTests.StaticThreadsafeTest
     public class StaticThreadsafeTest
     {
         private const int iterations = 10000000;
+        private const int TasksCount = 100;
+
         private delegate void InstanceOperation();
         private delegate void StaticOperation();
+
+        public StaticThreadsafeTest()
+        {
+            bool result;
+            //int wt, pt;
+            ThreadPool.GetAvailableThreads(out int wt, out int pt);
+            result = ThreadPool.SetMinThreads(3, pt);
+            Assert.AreEqual(true, result);
+
+            result = ThreadPool.SetMaxThreads(3, pt);
+            Assert.AreEqual(true, result);
+        }
 
         private class InstanceClass
         {
@@ -170,14 +184,15 @@ namespace POCTests.StaticThreadsafeTest
                 foreach (var record in tasksGrouped)
                     s = s + $"{Enum.GetName(typeof(TaskStatus), record.Key)} - {record.Count()};";
 
-                Console.WriteLine($"wt = {wt}, pt = {pt}, {s}");
+                Console.WriteLine($"wt = {wt}, pt = {pt}, pending = {ThreadPool.PendingWorkItemCount}, tc = {ThreadPool.ThreadCount}" +
+                    $" {s}");
                 Thread.Sleep(100);
             }
         }
 
         private void StartTasksInstance(List<Task> tasks, InstanceOperation add, InstanceOperation subtract)
         {
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < StaticThreadsafeTest.TasksCount; i++)
             {
                 tasks.Add(Task.Run(() => add()));
                 tasks.Add(Task.Run(() => subtract()));
@@ -186,7 +201,7 @@ namespace POCTests.StaticThreadsafeTest
 
         private void StartTasksStatic(List<Task> tasks, StaticOperation add, StaticOperation subtract)
         {
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < StaticThreadsafeTest.TasksCount; i++)
             {
                 tasks.Add(Task.Run(() => add()));
                 tasks.Add(Task.Run(() => subtract()));
