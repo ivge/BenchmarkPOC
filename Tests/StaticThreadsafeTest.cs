@@ -67,7 +67,7 @@ namespace POCTests.StaticThreadsafeTest
             {
                 for (long i = 0; i < iterations; i++)
                 {
-                    StaticClass.Field += 1;
+                    Field += 1;
                 }
             }
 
@@ -75,7 +75,7 @@ namespace POCTests.StaticThreadsafeTest
             {
                 for (long i = 0; i < iterations; i++)
                 {
-                    StaticClass.Field -= 1;
+                    Field -= 1;
                 }
             }
 
@@ -85,7 +85,7 @@ namespace POCTests.StaticThreadsafeTest
                 {
                     lock (Lock)
                     {
-                        StaticClass.Field += 1;
+                        Field += 1;
                     }
                 }
             }
@@ -96,7 +96,7 @@ namespace POCTests.StaticThreadsafeTest
                 {
                     lock (Lock)
                     {
-                        StaticClass.Field -= 1;
+                        Field -= 1;
                     }
                 }
             }
@@ -135,9 +135,10 @@ namespace POCTests.StaticThreadsafeTest
         {
             var tasks = new List<Task>();
 
+            StaticClass.Field = 0;
+
             StartTasksStatic(tasks, StaticClass.Add, StaticClass.Subtract);
             WaitAllTasks(tasks);
-
 
             Assert.AreEqual(0, StaticClass.Field);
         }
@@ -147,6 +148,8 @@ namespace POCTests.StaticThreadsafeTest
         public void TestMethodStaticLocked()
         {
             var tasks = new List<Task>();
+
+            StaticClass.Field = 0;
 
             StartTasksStatic(tasks, StaticClass.AddLocked, StaticClass.SubtractLocked);
             WaitAllTasks(tasks);

@@ -7,3 +7,4 @@
 /.vs/BenchmarkPOC/v16
 /Tests/obj
 /Tests/bin/Debug/net5.0
+*.v2
