@@ -11,7 +11,7 @@ namespace POCTests.StaticThreadsafeTest
     public class StaticThreadsafeTest
     {
         private const int iterations = 10000000;
-        private const int TasksCount = 100;
+        private const int TasksCount = 10;
 
         private delegate void InstanceOperation();
         private delegate void StaticOperation();
@@ -120,13 +120,10 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public async Task TestMethodInstanceAsync()
         {
-            var tasks = new List<Task>();
-
-
             var instance = new InstanceClass();
-            StartTasksInstance(tasks, instance.Add, instance.Subtract);
+            var tasks = CreateTasksInstance(instance.Add, instance.Subtract);
 
-            await WaitAllTasks(tasks);
+            await ExecuteAllTasksAsync(tasks);
 
             Assert.AreEqual(0, instance.Field);
         }
@@ -134,13 +131,21 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public void TestMethodInstance()
         {
-            var tasks = new List<Task>();
-
-
             var instance = new InstanceClass();
-            StartTasksInstance(tasks, instance.Add, instance.Subtract);
+            var tasks = CreateTasksInstance(instance.Add, instance.Subtract).ToArray();
 
-            WaitAllTasks(tasks).Wait();
+            ExecuteAllTasksAsync(tasks).Wait();
+
+            Assert.AreEqual(0, instance.Field);
+        }
+
+        [TestMethod]
+        public void TestMethodInstanceOneThread()
+        {
+            var instance = new InstanceClass();
+            var tasks = CreateTasksInstance(instance.Add, instance.Subtract).ToArray();
+
+            StartAllTasks(tasks);
 
             Assert.AreEqual(0, instance.Field);
         }
@@ -149,12 +154,10 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public async Task TestMethodInstanceLockedAsync()
         {
-            var tasks = new List<Task>();
-
             var instance = new InstanceClass();
-            StartTasksInstance(tasks, instance.AddLocked, instance.SubtractLocked);
+            var tasks = CreateTasksInstance(instance.AddLocked, instance.SubtractLocked).ToArray();
 
-            await WaitAllTasks (tasks);
+            await ExecuteAllTasksAsync(tasks);
 
             Assert.AreEqual(0, instance.Field);
         }
@@ -162,13 +165,10 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public void TestMethodInstanceLocked()
         {
-            var tasks = new List<Task>();
-
             var instance = new InstanceClass();
-            StartTasksInstance(tasks, instance.AddLocked, instance.SubtractLocked);
+            var tasks = CreateTasksInstance(instance.AddLocked, instance.SubtractLocked).ToArray();
 
-            WaitAllTasks(tasks).Wait();
-            
+            ExecuteAllTasksAsync(tasks).Wait();
 
             Assert.AreEqual(0, instance.Field);
         }
@@ -176,12 +176,10 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public async Task TestMethodStaticAsync()
         {
-            var tasks = new List<Task>();
-
             StaticClass.Field = 0;
 
-            StartTasksStatic(tasks, StaticClass.Add, StaticClass.Subtract);
-            await WaitAllTasks(tasks);
+            var tasks = CreateTasksStatic(StaticClass.Add, StaticClass.Subtract).ToArray();
+            await ExecuteAllTasksAsync(tasks);
 
             Assert.AreEqual(0, StaticClass.Field);
         }
@@ -189,12 +187,22 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public void TestMethodStatic()
         {
-            var tasks = new List<Task>();
-
             StaticClass.Field = 0;
 
-            StartTasksStatic(tasks, StaticClass.Add, StaticClass.Subtract);
-            WaitAllTasks(tasks).Wait();
+            var tasks = CreateTasksStatic(StaticClass.Add, StaticClass.Subtract).ToArray();
+            ExecuteAllTasksAsync(tasks).Wait();
+
+            Assert.AreEqual(0, StaticClass.Field);
+        }
+
+        [TestMethod]
+        public void TestMethodStaticOneThread()
+        {
+            StaticClass.Field = 0;
+
+            var tasks = CreateTasksStatic(StaticClass.Add, StaticClass.Subtract).ToArray();
+
+            StartAllTasks(tasks);
 
             Assert.AreEqual(0, StaticClass.Field);
         }
@@ -203,59 +211,93 @@ namespace POCTests.StaticThreadsafeTest
         [TestMethod]
         public async Task TestMethodStaticLockedAsync()
         {
-            var tasks = new List<Task>();
             StaticClass.Field = 0;
-            StartTasksStatic(tasks, StaticClass.AddLocked, StaticClass.SubtractLocked);
-            await WaitAllTasks(tasks);
-             Assert.AreEqual(0, StaticClass.Field);
+            var tasks = CreateTasksStatic(StaticClass.AddLocked, StaticClass.SubtractLocked).ToArray();
+            await ExecuteAllTasksAsync(tasks);
+            Assert.AreEqual(0, StaticClass.Field);
         }
 
 
         [TestMethod]
         public void TestMethodStaticLocked()
         {
-            var tasks = new List<Task>();
             StaticClass.Field = 0;
-            StartTasksStatic(tasks, StaticClass.AddLocked, StaticClass.SubtractLocked);
-            WaitAllTasks(tasks).Wait();
+            var tasks = CreateTasksStatic(StaticClass.AddLocked, StaticClass.SubtractLocked).ToArray();
+            ExecuteAllTasksAsync(tasks).Wait();
             Assert.AreEqual(0, StaticClass.Field);
         }
 
-        private async Task WaitAllTasks(List<Task> tasks)
+        private async Task ExecuteAllTasksAsync(IEnumerable<Task> tasks)
         {
-            var taskAll = Task.WhenAll(tasks.ToArray());
+            foreach (var task in tasks)
+                task.Start();
 
-            int wt, pt;
-            while (!taskAll.IsCompleted)
+            do
             {
-                ThreadPool.GetAvailableThreads(out wt, out pt);
-                var tasksGrouped = tasks.GroupBy(t => t.Status);
-                string s = "";
-                foreach (var record in tasksGrouped)
-                    s = s + $"{Enum.GetName(typeof(TaskStatus), record.Key)} - {record.Count()};";
-
-                Console.WriteLine($"wt = {wt}, pt = {pt}, pending = {ThreadPool.PendingWorkItemCount}, tc = {ThreadPool.ThreadCount}" +
-                    $" {s}");
-                await Task.Delay(100);
+                await GetThreadPoolStatistics(tasks);
             }
+            while (!tasks.All(task => task.IsCompleted));
         }
 
-        private void StartTasksInstance(List<Task> tasks, InstanceOperation add, InstanceOperation subtract)
+        private void StartAllTasks(IEnumerable<Task> tasks)
+        {
+            Task.Run(async () =>
+            {
+                do
+                {
+                    await GetThreadPoolStatistics(tasks);
+                }
+                while (!tasks.All(task => task.IsCompleted));
+            }
+            );
+
+            foreach (var task in tasks)
+                task.RunSynchronously();
+        }
+
+        private async Task GetThreadPoolStatistics(IEnumerable<Task> tasks)
+        {
+            await Task.Delay(100);
+            ThreadPool.GetAvailableThreads(out int wt, out int pt);
+            var tasksGrouped = tasks.GroupBy(t => t.Status);
+            string s = "";
+            foreach (var record in tasksGrouped)
+                s = s + $"{Enum.GetName(typeof(TaskStatus), record.Key)} - {record.Count()};";
+
+            Console.WriteLine($"wt = {wt}, pt = {pt}, pending = {ThreadPool.PendingWorkItemCount}, tc = {ThreadPool.ThreadCount}" +
+                $" {s}");
+
+        }
+
+        private Task[] CreateTasksInstance(InstanceOperation add, InstanceOperation subtract)
+        {
+            var result = new List<Task>(StaticThreadsafeTest.TasksCount * 2);
+            for (int i = 0; i < StaticThreadsafeTest.TasksCount; i++)
+            {
+                result.Add(new Task(() => add()));
+                result.Add(new Task(() => subtract()));
+            }
+            return result.ToArray();
+        }
+
+        private IEnumerable<Task> CreateTasksInstanceEnumerable(InstanceOperation add, InstanceOperation subtract)
         {
             for (int i = 0; i < StaticThreadsafeTest.TasksCount; i++)
             {
-                tasks.Add(Task.Run(() => add()));
-                tasks.Add(Task.Run(() => subtract()));
+                yield return new Task(() => add());
+                yield return new Task(() => subtract());
             }
         }
 
-        private void StartTasksStatic(List<Task> tasks, StaticOperation add, StaticOperation subtract)
+        private Task[] CreateTasksStatic(StaticOperation add, StaticOperation subtract)
         {
+            var result = new List<Task>(StaticThreadsafeTest.TasksCount * 2);
             for (int i = 0; i < StaticThreadsafeTest.TasksCount; i++)
             {
-                tasks.Add(Task.Run(() => add()));
-                tasks.Add(Task.Run(() => subtract()));
+                result.Add(new Task(() => add()));
+                result.Add(new Task(() => subtract()));
             }
+            return result.ToArray();
         }
     }
 }
