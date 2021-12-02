@@ -12,6 +12,7 @@ namespace POCTests.StaticThreadsafeTest
     {
         private const int iterations = 10000000;
         private const int TasksCount = 10;
+        private const int AvailableThreads = 5;
 
         private delegate void InstanceOperation();
         private delegate void StaticOperation();
@@ -21,10 +22,10 @@ namespace POCTests.StaticThreadsafeTest
             bool result;
             //int wt, pt;
             ThreadPool.GetAvailableThreads(out int wt, out int pt);
-            result = ThreadPool.SetMinThreads(100, pt);
+            result = ThreadPool.SetMinThreads(AvailableThreads, pt);
             Assert.AreEqual(true, result);
 
-            result = ThreadPool.SetMaxThreads(100, pt);
+            result = ThreadPool.SetMaxThreads(AvailableThreads, pt);
             Assert.AreEqual(true, result);
         }
 
